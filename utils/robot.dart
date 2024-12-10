@@ -2,18 +2,9 @@
 import 'package:meta/meta.dart';
 
 import 'grid2D.dart';
+import 'pathfinding.dart';
+import 'pathfindingGrid.dart';
 import 'point.dart';
-
-// CellTypes - what the robot thinks the grid pos is.
-class CellType {
-  final String symbol;
-  final String description;
-  final CellBehavior behavior;
-
-  const CellType(this.symbol, this.description, this.behavior);
-}
-
-enum CellBehavior { clear, blocking, start, goal }
 
 @immutable
 class PositionState {
@@ -57,9 +48,9 @@ class Robot {
   ];
 
   Robot({
-    Point? initialPosition,
     required this.facing,
     required this.grid,
+    Point? initialPosition,
     List<CellType>? cellTypes,
   })  : cellTypes = cellTypes ?? defaultCellTypes,
         position = initialPosition ?? const Point(0, 0) {
@@ -82,7 +73,9 @@ class Robot {
   Robot.from(Robot other, {Grid2D? newGrid})
       : position = other.position,
         facing = other.facing,
-        grid = newGrid ?? Grid2D.fromString(other.grid.toString()),
+        grid = newGrid ??
+            Grid2D.fromString(
+                other.grid.toString(), other.grid.supportedCellTypes),
         cellTypes = List.from(other.cellTypes) {
     visitedPositions.addAll(other.visitedPositions);
     visitHistory.addAll(other.visitHistory);
@@ -125,6 +118,38 @@ class Robot {
     visitHistory.add(PositionState(position, facing));
   }
 
+bool moveToPosition(Point ps) {
+    if (ps == position) return true;
+
+    var a = AStar(grid);
+    var path = a.findPath(Node(position), Node(ps));
+
+    if (path != null) {
+      var planner = RobotMovementPlanner();
+      var commands = planner.planPath(path, facing);
+
+      for (var command in commands) {
+        switch (command.type) {
+          case MovementType.turnLeft:
+            turnLeft();
+            break;
+          case MovementType.turnRight:
+            turnRight();
+            break;
+          case MovementType.moveForward:
+            if (!moveForward()) {
+              return false;
+            }
+            break;
+        }
+      }
+      return true;
+    }
+
+    print('No path found.');
+    return false;
+  }
+
   // Helper methods
   bool _isValidPosition(Point p) {
     return grid.isInBounds(p.row, p.col);
@@ -139,8 +164,8 @@ class Robot {
     return _isClearCell(cell);
   }
 
-  bool _isClearCell(String cell) {
-    return cellTypes.where((type) => type.symbol == cell).any((type) =>
+  bool _isClearCell(CellType cell) {
+    return cellTypes.where((type) => type.symbol == cell.symbol).any((type) =>
         type.behavior == CellBehavior.clear ||
         type.behavior == CellBehavior.start);
   }
@@ -167,7 +192,7 @@ class Robot {
   String lookAhead() {
     final ahead = position.move(facing);
     if (_isValidPosition(ahead)) {
-      return grid.getAt(ahead.row, ahead.col);
+      return grid.getAt(ahead.row, ahead.col).symbol;
     }
     return '!'; // Treat out of bounds as wall
   }
@@ -176,7 +201,7 @@ class Robot {
   String lookInDirection(Direction dir) {
     final lookDir = position.move(dir);
     if (_isValidPosition(lookDir)) {
-      return grid.getAt(lookDir.row, lookDir.col);
+      return grid.getAt(lookDir.row, lookDir.col).symbol;
     }
     return '!'; // Treat out of bounds as wall
   }
@@ -193,7 +218,7 @@ class Robot {
     for (final dir in Direction.values) {
       final pos = position.move(dir);
       surroundings[dir] =
-          _isValidPosition(pos) ? grid.getAt(pos.row, pos.col) : '#';
+          _isValidPosition(pos) ? grid.getAt(pos.row, pos.col).symbol : '#';
     }
     return surroundings;
   }
@@ -296,7 +321,7 @@ class Robot {
       for (var col = 0; col < grid.cols; col++) {
         final cell = grid.getAt(row, col);
         if (cellTypes
-            .where((type) => type.symbol == cell)
+            .where((type) => type.symbol == cell.symbol)
             .any((type) => type.behavior == CellBehavior.start)) {
           position = Point(row, col);
           return true;
@@ -317,7 +342,8 @@ class Robot {
 
     // Mark all visited positions
     for (final pos in visitedPositions) {
-      displayGrid.setAt(pos.row, pos.col, visitedMarker);
+      displayGrid.setAt(pos.row, pos.col,
+          CellType(visitedMarker, 'visited', CellBehavior.clear));
     }
 
     // Optionally show current position with direction
@@ -329,7 +355,11 @@ class Robot {
         Direction.right => '>',
         _ => 'R',
       };
-      displayGrid.setAt(position.row, position.col, directionMarker);
+      displayGrid.setAt(
+        position.row,
+        position.col,
+        CellType(directionMarker, directionMarker, CellBehavior.clear),
+      );
     }
 
     return withCoordinates
@@ -342,15 +372,19 @@ class Robot {
     var displayGrid = grid.copy();
 
     // Mark path with direction markers
-    for (var state in visitHistory) {
-      String marker = switch (state.facing) {
+    for (final state in visitHistory) {
+      final marker = switch (state.facing) {
         Direction.up => '↑',
         Direction.down => '↓',
         Direction.left => '←',
         Direction.right => '→',
         _ => '•',
       };
-      displayGrid.setAt(state.position.row, state.position.col, marker);
+      displayGrid.setAt(
+        state.position.row,
+        state.position.col,
+        CellType(marker, marker, CellBehavior.clear),
+      );
     }
 
     return withCoordinates
@@ -393,5 +427,66 @@ class Robot {
       Direction.left => Direction.down,
       _ => facing,
     };
+  }
+}
+
+class MovementCommand {
+  final MovementType type;
+  final int count;
+
+  MovementCommand(this.type, this.count);
+}
+
+enum MovementType { turnLeft, turnRight, moveForward }
+
+class RobotMovementPlanner {
+  List<MovementCommand> planPath(List<Node> path, Direction startFacing) {
+    var commands = <MovementCommand>[];
+    var currentFacing = startFacing;
+
+    for (var i = 0; i < path.length - 1; i++) {
+      var current = path[i];
+      var next = path[i + 1];
+
+      // Calculate required direction
+      var targetDirection = getRequiredDirection(current, next);
+
+      // Add turning commands
+      var turnCommands = calculateTurns(currentFacing, targetDirection);
+      commands.addAll(turnCommands);
+
+      // Add forward movement
+      commands.add(MovementCommand(MovementType.moveForward, 1));
+
+      currentFacing = targetDirection;
+    }
+
+    return commands;
+  }
+
+  Direction getRequiredDirection(Node current, Node next) {
+    var dx = next.loc.col - current.loc.col;
+    var dy = next.loc.row - current.loc.row;
+
+    if (dx == 1) return Direction.down;
+    if (dx == -1) return Direction.up;
+    if (dy == 1) return Direction.left;
+    return Direction.right;
+  }
+
+  List<MovementCommand> calculateTurns(Direction current, Direction target) {
+    if (current == target) return [];
+
+    var currentIndex = Direction.values.indexOf(current);
+    var targetIndex = Direction.values.indexOf(target);
+    var diff = (targetIndex - currentIndex + 4) % 4;
+
+    if (diff <= 2) {
+      return List.generate(
+          diff, (_) => MovementCommand(MovementType.turnRight, 1));
+    } else {
+      return List.generate(
+          4 - diff, (_) => MovementCommand(MovementType.turnLeft, 1));
+    }
   }
 }

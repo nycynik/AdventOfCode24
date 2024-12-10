@@ -1,13 +1,26 @@
 import '../utils/grid2D.dart';
 import '../utils/index.dart';
+import '../utils/pathfindingGrid.dart';
 import '../utils/point.dart';
 
 class Day04 extends GenericDay {
   Day04() : super(4);
 
+  // Create custom cell types (optional)
+  final customCellTypes = [
+    const CellType('X', 'X', CellBehavior.clear),
+    const CellType('M', 'M', CellBehavior.clear),
+    const CellType('A', 'A', CellBehavior.clear),
+    const CellType('S', 'S', CellBehavior.clear),
+  ];
+
   @override
   Grid2D parseInput() {
-    final grid = Grid2D.fromString(input.asString);
+    final grid = Grid2D.fromString(
+      input.asString,
+      customCellTypes,
+      ignoreTypes: true,
+    );
     return grid;
   }
 

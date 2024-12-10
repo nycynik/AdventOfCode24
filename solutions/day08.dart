@@ -1,13 +1,24 @@
 import '../utils/grid2D.dart';
+import '../utils/pathfindingGrid.dart';
 import '../utils/point.dart';
 import '../utils/index.dart';
 
 class Day08 extends GenericDay {
   Day08() : super(8);
 
+  final customCellTypes = [
+    const CellType('.', 'Empty space', CellBehavior.clear),
+    const CellType('#', 'Obstical', CellBehavior.blocking),
+    const CellType('^', 'Start', CellBehavior.start),
+  ];
+    
   @override
   Grid2D parseInput() {
-    return Grid2D.fromString(input.asString);
+    return Grid2D.fromString(
+      input.asString,
+      customCellTypes,
+      ignoreTypes: true,
+    );
   }
 
   @override
@@ -21,8 +32,6 @@ class Day08 extends GenericDay {
         final instances = grid.findInstances(character);
         for (var x = 0; x < instances.length; x++) {
           for (var y = x + 1; y < instances.length; y++) {
-            final rowOffset = (instances[x].row - instances[y].row).abs();
-            final colOffset = (instances[x].col - instances[y].col).abs();
             final antinode1 = instances[y] + (instances[y] - instances[x]);
             final antinode2 = instances[x] + (instances[x] - instances[y]);
             if (grid.isValidPoint(antinode1)) {

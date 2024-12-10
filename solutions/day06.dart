@@ -1,26 +1,27 @@
 import '../utils/grid2D.dart';
 import '../utils/index.dart';
+import '../utils/pathfindingGrid.dart';
 import '../utils/point.dart';
 import '../utils/robot.dart';
 
 class Day06 extends GenericDay {
   Day06() : super(6);
+  
+  // Create custom cell types (optional)
+  final customCellTypes = [
+    const CellType('.', 'Empty space', CellBehavior.clear),
+    const CellType('#', 'Obstical', CellBehavior.blocking),
+    const CellType('^', 'Start', CellBehavior.start),
+  ];
 
   @override
   Grid2D parseInput() {
-    return Grid2D.fromString(input.asString);
+    return Grid2D.fromString(input.asString, customCellTypes);
   }
 
   @override
   int solvePart1() {
     final grid = parseInput();
-
-    // Create custom cell types (optional)
-    final customCellTypes = [
-      const CellType('.', 'Empty space', CellBehavior.clear),
-      const CellType('#', 'Obstical', CellBehavior.blocking),
-      const CellType('^', 'Start', CellBehavior.start),
-    ];
 
     // Create a robot
     final robot = Robot(
@@ -41,13 +42,6 @@ class Day06 extends GenericDay {
   @override
   int solvePart2() {
     final grid = parseInput();
-
-    // Create custom cell types (optional)
-    final customCellTypes = [
-      const CellType('.', 'Empty space', CellBehavior.clear),
-      const CellType('#', 'Obstical', CellBehavior.blocking),
-      const CellType('^', 'Start', CellBehavior.start),
-    ];
 
     // Create a robot
     final robot = Robot(
@@ -76,7 +70,7 @@ class Day06 extends GenericDay {
         case '#':
           // check if we are surrounded by bad moves
           bool isBlocked(Point position) =>
-              grid.getAt(position.row, position.col) == '#';
+              grid.getAt(position.row, position.col).symbol == '#';
           if (grid.getNeighbors(robot.position).every(isBlocked)) {
             return 0;
           }
@@ -101,9 +95,9 @@ class Day06 extends GenericDay {
           // simulate the blocked move, add a block to the map,
           // and run the robot from that spot.
           if (!blockAdded) {
-            final newGrid = Grid2D.fromString(grid.toString());
+            final newGrid = Grid2D.fromString(grid.toString(), customCellTypes);
             final nextSpot = robot.getAheadPosition();
-            newGrid.setAt(nextSpot.row, nextSpot.col, '#');
+            newGrid.setAt(nextSpot.row, nextSpot.col, CellType.fromChar('#'));
             final newRobot = Robot.from(robot, newGrid: newGrid);
             loopChances += runRunRobot(newGrid, newRobot, blockAdded: true);
           }

@@ -1,3 +1,4 @@
+import 'pathfindingGrid.dart';
 import 'point.dart';
 
 /*
@@ -34,25 +35,28 @@ enum Direction {
   bool get isDiagonal => rowDelta != 0 && colDelta != 0;
 }
 
-class Grid2D {
-  late List<List<String>> _grid;
-  final int rows;
-  final int cols;
+class Grid2D extends BaseGrid implements PathfindingGrid {
+  late List<List<CellType>> _grid;
+  final List<CellType> _supportedCellTypes;
   final Map<String, int> spaceTypes = {};
+  @override
+  final int length; // (number of rows/height/length)
+  @override
+  final int width;
 
-  Grid2D(this.rows, this.cols, {String fill = '.'}) {
-    _grid = List.generate(
-      rows,
-      (i) => List.generate(cols, (j) => fill),
-    );
-    spaceTypes[fill] = rows * cols;
-  }
+  // Grid2D(this._grid, this._supportedCellTypes) {
+  //   _grid = List.generate(
+  //     rows,
+  //     (i) => List.generate(cols, (j) => CellType(fill, '', CellBehavior.clear)),
+  //   );
+  //   spaceTypes[fill] = rows * cols;
+  // }
 
-  // Create from list of strings
-  Grid2D.fromStrings(List<String> lines)
-      : rows = lines.length,
-        cols = lines[0].length {
-    _grid = lines.map((line) => line.split('')).toList();
+  Grid2D(this._grid, this._supportedCellTypes)
+      : length = _grid.length, // (number of rows/height/length)
+        width = _grid[0].length {
+    // (number of columns/width)
+    // validateCellTypes();  // Ensure minimum required types are present
 
     // Validate all rows have same length
     if (!_grid.every((row) => row.length == cols)) {
@@ -60,22 +64,66 @@ class Grid2D {
     }
 
     // Count occurrences of each character
-    for (var row in _grid) {
-      for (var char in row) {
-        spaceTypes[char] = (spaceTypes[char] ?? 0) + 1;
+    for (final row in _grid) {
+      for (final cell in row) {
+        spaceTypes[cell.symbol] = (spaceTypes[cell.symbol] ?? 0) + 1;
       }
     }
   }
 
-  // Create from single multi-line string
-  factory Grid2D.fromString(String input) {
-    return Grid2D.fromStrings(input.trim().split('\n'));
+  // Factory constructor with custom cell types
+  factory Grid2D.withTypes(
+      List<List<CellType>> grid, List<CellType> customTypes) {
+    var allTypes = [
+      BaseGrid.empty,
+      BaseGrid.blocked,
+      ...customTypes,
+    ];
+    return Grid2D(grid, allTypes);
   }
 
-  // copy
-  Grid2D copy() {
-    // Create a new grid with copied rows
-    return Grid2D.fromString(toString());
+  // Create from list of strings
+  factory Grid2D.fromStrings(List<String> lines, List<CellType> customTypes,
+      {bool ignoreTypes = false}) {
+    final allTypes = [BaseGrid.empty, BaseGrid.blocked, ...customTypes];
+    final grid = lines
+        .map((line) => line
+            .split('')
+            .map(
+              (char) => allTypes.firstWhere(
+                (type) => type.symbol == char,
+                orElse: () => !ignoreTypes
+                    ? throw ArgumentError('Unknown cell type: $char')
+                    : CellType(char, char, CellBehavior.clear), // antenna
+              ),
+            )
+            .toList())
+        .toList();
+
+    return Grid2D(grid, allTypes);
+  }
+
+  // Create from single multi-line string
+  factory Grid2D.fromString(String input, List<CellType> customTypes,
+      {bool ignoreTypes = false}) {
+    return Grid2D.fromStrings(input.trim().split('\n'), customTypes,
+        ignoreTypes: ignoreTypes);
+  }
+
+  @override
+  List<CellType> get supportedCellTypes => _supportedCellTypes;
+
+  @override
+  CellType operator [](Point p) {
+    if (!isValidPosition(p)) {
+      throw RangeError('Position $p is out of bounds');
+    }
+    return _grid[p.row][p.col];
+  }
+
+  @override
+  bool isValidPosition(Point loc) {
+    return isValidPoint(loc);
   }
 
   // getters & setters
@@ -83,19 +131,31 @@ class Grid2D {
   int getCharCount(String char) => spaceTypes[char] ?? 0;
 
   // Basic operations
-  String getAt(int row, int col) {
-    if (!isInBounds(row, col)) return '';
+  CellType getAt(int row, int col) {
+    if (!isInBounds(row, col)) {
+      throw RangeError('Position ($row, $col) is out of bounds for grid '
+          'size ${rows}x${cols}');
+    }
     return _grid[row][col];
   }
 
-  String getAtPoint(Point p) => getAt(p.row, p.col);
+  CellType getAtPoint(Point p) => getAt(p.row, p.col);
 
-  void setAt(int row, int col, String value) {
+  void setAt(int row, int col, CellType value) {
     if (!isInBounds(row, col)) return;
     _grid[row][col] = value;
   }
 
-  void setAtPoint(Point p, String value) => setAt(p.row, p.col, value);
+  void setAtWithString(int row, int col, String value) {
+    if (!isInBounds(row, col)) return;
+    if (!_supportedCellTypes.any((type) => type.symbol == value)) {
+      throw ArgumentError('Unsupported cell type: $value');
+    }
+    var cell = _supportedCellTypes.firstWhere((type) => type.symbol == value);
+    _grid[row][col] = cell;
+  }
+
+  void setAtPoint(Point p, CellType value) => setAt(p.row, p.col, value);
 
   bool isInBounds(int row, int col) {
     return row >= 0 && row < rows && col >= 0 && col < cols;
@@ -105,9 +165,9 @@ class Grid2D {
   List<(Point, Direction)> findString(String target) {
     List<(Point, Direction)> results = [];
 
-    for (int row = 0; row < rows; row++) {
-      for (int col = 0; col < cols; col++) {
-        for (Direction dir in Direction.values) {
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        for (final dir in Direction.values) {
           if (_checkStringAt(row, col, target, dir)) {
             results.add((Point(row, col), dir));
           }
@@ -119,14 +179,18 @@ class Grid2D {
   }
 
   bool _checkStringAt(
-      int startRow, int startCol, String target, Direction dir) {
+    int startRow,
+    int startCol,
+    String target,
+    Direction dir,
+  ) {
     if (target.isEmpty) return true;
 
     int row = startRow;
     int col = startCol;
 
     for (int i = 0; i < target.length; i++) {
-      if (!isInBounds(row, col) || _grid[row][col] != target[i]) {
+      if (!isInBounds(row, col) || _grid[row][col].symbol != target[i]) {
         return false;
       }
       row += dir.rowDelta;
@@ -157,9 +221,9 @@ class Grid2D {
   List<Point> findInstances(String target) {
     List<Point> results = [];
 
-    for (int row = 0; row < rows; row++) {
-      for (int col = 0; col < cols; col++) {
-        if (_grid[row][col] == target) {
+    for (var row = 0; row < rows; row++) {
+      for (var col = 0; col < cols; col++) {
+        if (_grid[row][col].symbol == target) {
           results.add(Point(row, col));
         }
       }
@@ -255,5 +319,28 @@ class Grid2D {
   @override
   String toString() {
     return _grid.map((row) => row.join()).join('\n');
+  }
+
+  @override
+  bool isWalkable(Point p) {
+    return _supportedCellTypes
+        .where((type) => type.symbol == getAtPoint(p).symbol)
+        .any((type) =>
+            type.behavior == CellBehavior.clear ||
+            type.behavior == CellBehavior.start);
+  }
+
+  @override
+  int get rows => length;
+
+  @override
+  int get cols => width;
+
+  // Create a copy with the same values
+  Grid2D copy() {
+    return Grid2D(
+      _grid.map((row) => row.map((cell) => cell.copy()).toList()).toList(),
+      _supportedCellTypes,
+    );
   }
 }
