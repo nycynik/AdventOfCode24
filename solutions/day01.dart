@@ -37,34 +37,34 @@ class Day01 extends GenericDay {
       totalDiff += (totals[1][x] - totals[0][x]).abs();
     }
 
-    // Create from raw strings
-    final customCellTypes = [
-      const CellType('^', 'Start', CellBehavior.start),
-      const CellType(r'$', 'Goal', CellBehavior.goal),
-    ];
+    // // Create from raw strings
+    // final customCellTypes = [
+    //   const CellType('^', 'Start', CellBehavior.start),
+    //   const CellType(r'$', 'Goal', CellBehavior.goal),
+    // ];
 
-    // Create a grid with custom types
-    var grid = Grid2D.fromStrings([
-      '...#.',
-      '.#..^',
-      '.....',
-      r'#...$',
-      '.....',
-    ], customCellTypes);
+    // // Create a grid with custom types
+    // var grid = Grid2D.fromStrings([
+    //   '...#.',
+    //   '.#..^',
+    //   '.....',
+    //   r'#...$',
+    //   '.....',
+    // ], customCellTypes);
 
-    final r = Robot(
-      facing: Direction.right,
-      grid: grid,
-      initialPosition: const Point(0, 0),
-      cellTypes: customCellTypes,
-    );
+    // final r = Robot(
+    //   facing: Direction.right,
+    //   grid: grid,
+    //   initialPosition: const Point(0, 0),
+    //   cellTypes: customCellTypes,
+    // );
 
-    if (r.moveToPosition(const Point(4, 4))) {
-      print('Reached goal!');
-    }
+    // if (r.canMoveToPosition(const Point(4, 4))) {
+    //   print('Reached goal!');
+    // }
 
-    // Print the grid
-    print(r.getPathMap(withCoordinates: true));
+    // // Print the grid
+    // print(r.getPathMap(withCoordinates: true));
 
     return totalDiff;
   }

@@ -67,8 +67,14 @@ class SparseGrid implements PathfindingGrid {
   List<CellType> get supportedCellTypes => _supportedCellTypes;
 
   // Helper method to check if a position is walkable (not blocked)
+  @override
   bool isWalkable(Point p) {
     return isValidPosition(p) && !_obstacles.contains(p);
+  }
+
+  @override
+  bool isTraversable(Point start, Point dest) {
+    return isWalkable(start) && isWalkable(dest);
   }
 
   // Method to add an obstacle
@@ -123,5 +129,16 @@ class SparseGrid implements PathfindingGrid {
   @override
   void validateCellTypes() {
     return;
+  }
+
+  @override
+  double costToMove(Point from, Point to) {
+    // TODO: implement costToMove
+    throw UnimplementedError();
+  }
+
+  @override
+  double getMinimumMoveCost() {
+    return 1.0;
   }
 }

@@ -1,3 +1,5 @@
+import 'package:chalkdart/chalk.dart';
+
 import 'pathfindingGrid.dart';
 import 'point.dart';
 
@@ -126,6 +128,18 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     return isValidPoint(loc);
   }
 
+  @override
+  double costToMove(Point from, Point to) {
+    return 1.0 + (this[from].value - this[to].value).abs();
+  }
+
+  @override
+  double getMinimumMoveCost() {
+    // Return the minimum possible cost for any move
+    // This is important for the heuristic to remain admissible
+    return 1.0; // or whatever your minimum cost would be
+  }
+
   // getters & setters
   Set<String> get characters => spaceTypes.keys.toSet();
   int getCharCount(String char) => spaceTypes[char] ?? 0;
@@ -218,7 +232,9 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     return neighbors;
   }
 
-  List<Point> findInstances(String target) {
+  /* Search functions */
+  // Find Symbols
+  List<Point> findSymbolsOnGrid(String target) {
     List<Point> results = [];
 
     for (var row = 0; row < rows; row++) {
@@ -230,6 +246,21 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     }
 
     return results;
+  }
+
+  List<Point> findCellBehaviorsOnGrid(CellBehavior target) {
+    var foundCells = <Point>[];
+
+    for (var row = 0; row < length; row++) {
+      for (var col = 0; col < width; col++) {
+        var point = Point(row, col);
+        if (this[point].behavior == target) {
+          foundCells.add(point);
+        }
+      }
+    }
+
+    return foundCells;
   }
 
   // Move around the grid
@@ -280,6 +311,7 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     bool showTens = false,
     String padding = ' ',
     bool showRowNumbers = true,
+    bool color = true,
   }) {
     final buffer = StringBuffer();
 
@@ -307,7 +339,17 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
       }
 
       for (var col = 0; col < cols; col++) {
-        buffer.write(getAt(row, col));
+        var cell = getAt(row, col);
+        if (color) {
+          var color = chalk.white;
+          if (cell.behavior == CellBehavior.start) color = chalk.bold.yellow;
+          if (cell.behavior == CellBehavior.goal) color = chalk.bold.green;
+          if (cell.behavior == CellBehavior.blocking) color = chalk.white;
+          if (cell.behavior == CellBehavior.clear) color = chalk.gray;
+          buffer.write(color(cell.symbol));
+        } else {
+          buffer.write(cell.symbol);
+        }
       }
       buffer.writeln();
     }
@@ -325,10 +367,25 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
   bool isWalkable(Point p) {
     return _supportedCellTypes
         .where((type) => type.symbol == getAtPoint(p).symbol)
-        .any((type) =>
-            type.behavior == CellBehavior.clear ||
-            type.behavior == CellBehavior.start);
+        .any(
+          (type) =>
+              type.behavior == CellBehavior.clear ||
+              type.behavior == CellBehavior.start ||
+              type.behavior == CellBehavior.goal,
+        );
   }
+
+  @override
+  bool isTraversable(Point start, Point dest) {
+    if (isWalkable(start) && isWalkable(dest)) {
+      if ((getAtPoint(dest).value - getAtPoint(start).value) == 1) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+
 
   @override
   int get rows => length;

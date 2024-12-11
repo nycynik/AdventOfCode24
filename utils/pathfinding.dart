@@ -17,7 +17,7 @@ class Node {
   int get hashCode => Object.hash(loc.col, loc.row);
 
   @override
-  String toString() => '$loc \$$f';
+  String toString() => '$loc \$$f $g';
 }
 
 class AStar {
@@ -35,6 +35,10 @@ class AStar {
     var openSet = <Node>{};
     var closedSet = <Node>{};
 
+    start
+      ..g = 0
+      ..h = _calculateHeuristic(start, goal)
+      ..f = start.g + start.h;
     openSet.add(start);
 
     while (openSet.isNotEmpty) {
@@ -42,6 +46,7 @@ class AStar {
       var current = openSet.reduce((a, b) => a.f < b.f ? a : b);
 
       if (current == goal) {
+        //goal.g = current.g; // Make sure goal has correct cost
         return _reconstructPath(current);
       }
 
@@ -49,33 +54,35 @@ class AStar {
       closedSet.add(current);
 
       // Check all neighbors
-      for (var dir in directions) {
-        var neightbor =
-            Node(Point(current.loc.col + dir[0], current.loc.row + dir[1]));
+      for (final dir in directions) {
+        var neighborPos = Point(
+          current.loc.row + dir[0], // row first
+          current.loc.col + dir[1], // then column
+        );
 
-        // Check if position is within grid bounds
-        if (!grid.isValidPosition(neightbor.loc)) continue;
+        // Within grid and walkable.
+        if (!grid.isValidPosition(neighborPos)) continue;
+        if (!grid.isWalkable(neighborPos)) continue;
+        if (!grid.isTraversable(current.loc, neighborPos)) continue;
 
-        // Check if position is walkable
-        if (!grid.isWalkable(neightbor.loc)) continue;
-
-        var neighbor = Node(neightbor.loc);
+        var neighbor = Node(neighborPos);
 
         // Skip if already evaluated
         if (closedSet.contains(neighbor)) continue;
 
-        // Calculate g score
-        var tentativeG =
-            current.g + 1; // Assuming cost of 1 to move to adjacent square
+        // Calculate cost to move to neighbor (g score)
+        var moveCost = grid.costToMove(current.loc, neighbor.loc);
+        var tentativeG = current.g + moveCost;
 
-        var isNewNode = !openSet.contains(neighbor);
-        if (isNewNode) {
+        var existingNeighbor = openSet.lookup(neighbor);
+        if (existingNeighbor != null) {
+          if (tentativeG >= existingNeighbor.g) continue;
+          neighbor = existingNeighbor;
+        } else {
           openSet.add(neighbor);
-        } else if (tentativeG >= neighbor.g) {
-          continue; // This is not a better path
         }
 
-        // This path is the best until now. Record it!
+        // Update neighbor with new costs
         neighbor.parent = current
           ..g = tentativeG
           ..h = _calculateHeuristic(neighbor, goal)
@@ -86,20 +93,158 @@ class AStar {
     return null; // No path found
   }
 
+  List<List<Node>> findAllOptimalPaths(Node start, Node goal) {
+    final openSet = <Node>{};
+    final closedSet = <Node>{};
+    final optimalPaths = <List<Node>>[];
+    var optimalCost = double.infinity;
+
+    start
+      ..g = 0
+      ..h = _calculateHeuristic(start, goal)
+      ..f = start.g + start.h;
+    openSet.add(start);
+
+    while (openSet.isNotEmpty) {
+      var current = openSet.reduce((a, b) => a.f < b.f ? a : b);
+
+      if (current == goal) {
+        final path = _reconstructPath(current);
+        final pathCost = current.g;
+
+        if (pathCost < optimalCost) {
+          // Found a better path, clear previous paths
+          optimalPaths.clear();
+          optimalCost = pathCost;
+          optimalPaths.add(path);
+        } else if (pathCost == optimalCost) {
+          // Found another path with same cost
+          optimalPaths.add(path);
+        }
+        // Continue searching for other paths
+        openSet.remove(current);
+        closedSet.add(current);
+        continue;
+      }
+
+      openSet.remove(current);
+      closedSet.add(current);
+
+      for (final dir in directions) {
+        final neighborPos =
+            Point(current.loc.row + dir[0], current.loc.col + dir[1]);
+
+        if (!grid.isValidPosition(neighborPos)) continue;
+        if (!grid.isWalkable(neighborPos)) continue;
+        if (!grid.isTraversable(current.loc, neighborPos)) continue;
+
+        var neighbor = Node(neighborPos);
+        if (closedSet.contains(neighbor)) continue;
+
+        final moveCost = grid.costToMove(current.loc, neighborPos);
+        final tentativeG = current.g + moveCost;
+
+        // Only consider paths that could be optimal
+        if (tentativeG + _calculateHeuristic(neighbor, goal) > optimalCost) {
+          continue;
+        }
+
+        final existingNeighbor = openSet.lookup(neighbor);
+        if (existingNeighbor != null) {
+          if (tentativeG > existingNeighbor.g) continue;
+          // Equal cost path - create new node to track alternate path
+          if (tentativeG == existingNeighbor.g) {
+            neighbor = Node(neighborPos);
+          } else {
+            neighbor = existingNeighbor;
+          }
+        }
+
+        neighbor
+          ..parent = current
+          ..g = tentativeG
+          ..h = _calculateHeuristic(neighbor, goal)
+          ..f = neighbor.g + neighbor.h;
+
+        if (existingNeighbor == null) {
+          openSet.add(neighbor);
+        }
+      }
+    }
+
+    return optimalPaths;
+  }
+
+  List<List<Point>> findAllPaths(Point start, Point goal) {
+    final allPaths = <List<Point>>[];
+    final visited = <Point>{};
+    final currentPath = <Point>[];
+
+    void dfs(Point current) {
+      // Add current position to path and visited set
+      currentPath.add(current);
+      visited.add(current);
+
+      // If we reached the goal, save this path
+      if (current == goal) {
+        allPaths.add(List.from(currentPath));
+      } else {
+        // Try all possible directions
+        for (final dir in directions) {
+          final next = Point(current.row + dir[0], current.col + dir[1]);
+
+          // Check if move is legal
+          if (grid.isValidPosition(next) &&
+              grid.isWalkable(next) &&
+              grid.isTraversable(current, next) &&
+              !visited.contains(next)) {
+            dfs(next);
+          }
+        }
+      }
+
+      // Backtrack: remove current position from path and visited set
+      currentPath.removeLast();
+      visited.remove(current);
+    }
+
+    // Start the search
+    dfs(start);
+    return allPaths;
+  }
+
   double _calculateHeuristic(Node node, Node goal) {
-    // Manhattan distance
-    return node.loc.manhattanDistance(goal.loc).toDouble();
+    // Manhattan distance multiplied by minimum possible move cost
+    // This ensures the heuristic is admissible
+    final minCost = grid.getMinimumMoveCost();
+    return node.loc.manhattanDistance(goal.loc) * minCost;
+  }
+
+  double getPathCost(List<Node> path) {
+    return path.last.g; // The last node contains total cost from start
   }
 
   List<Node> _reconstructPath(Node node) {
-    var path = <Node>[];
+    final path = <Node>[];
     var current = node;
 
     while (current.parent != null) {
-      path.add(current);
+      // Create new node to avoid reference issues
+      final pathNode = Node(current.loc)
+        ..g = current.g
+        ..h = current.h
+        ..f = current.f
+        ..parent = current.parent;
+      path.add(pathNode);
       current = current.parent!;
     }
-    path.add(current); // Add start node
+    // Add start node
+    path.add(
+      Node(current.loc)
+        ..g = current.g
+        ..h = current.h
+        ..f = current.f,
+    );
 
     return path.reversed.toList();
   }

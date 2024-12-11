@@ -4,6 +4,7 @@ version: 1.0.0
 environment:
   sdk: ">=3.0.0 <4.0.0"
 dependencies:
+  chalkdart: ^2.2.1
   collection: ^1.18.0
   meta: ^1.11.0
   quiver: ^3.2.1

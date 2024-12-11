@@ -29,7 +29,7 @@ class Day08 extends GenericDay {
     for (final character in grid.characters) {
       if (character != '.' && grid.getCharCount(character) >= 2) {
         // find all instances of the character in the grid
-        final instances = grid.findInstances(character);
+        final instances = grid.findSymbolsOnGrid(character);
         for (var x = 0; x < instances.length; x++) {
           for (var y = x + 1; y < instances.length; y++) {
             final antinode1 = instances[y] + (instances[y] - instances[x]);
@@ -55,7 +55,7 @@ class Day08 extends GenericDay {
     for (final character in grid.characters) {
       if (character != '.' && grid.getCharCount(character) >= 2) {
         // find all instances of the character in the grid
-        final instances = grid.findInstances(character);
+        final instances = grid.findSymbolsOnGrid(character);
         for (var x = 0; x < instances.length; x++) {
           for (var y = x + 1; y < instances.length; y++) {
             var startPosition = instances[y];

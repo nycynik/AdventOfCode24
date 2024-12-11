@@ -32,6 +32,7 @@ class PositionState {
 class Robot {
   Point position;
   Direction facing;
+  num maxIncrementPerMove;
   final Grid2D grid;
   final List<CellType> cellTypes;
   final Set<Point> visitedPositions = {};
@@ -52,6 +53,7 @@ class Robot {
     required this.grid,
     Point? initialPosition,
     List<CellType>? cellTypes,
+    this.maxIncrementPerMove = double.infinity,
   })  : cellTypes = cellTypes ?? defaultCellTypes,
         position = initialPosition ?? const Point(0, 0) {
     if (initialPosition == null) {
@@ -73,6 +75,7 @@ class Robot {
   Robot.from(Robot other, {Grid2D? newGrid})
       : position = other.position,
         facing = other.facing,
+        maxIncrementPerMove = other.maxIncrementPerMove,
         grid = newGrid ??
             Grid2D.fromString(
                 other.grid.toString(), other.grid.supportedCellTypes),
@@ -118,7 +121,14 @@ class Robot {
     visitHistory.add(PositionState(position, facing));
   }
 
-bool moveToPosition(Point ps) {
+  List<Node>? getPathToPosition(Point ps) {
+    if (ps == position) return [Node(ps)];
+
+    var a = AStar(grid);
+    return a.findPath(Node(position), Node(ps));
+  }
+
+  bool moveToPosition(Point ps) {
     if (ps == position) return true;
 
     var a = AStar(grid);
@@ -143,10 +153,11 @@ bool moveToPosition(Point ps) {
             break;
         }
       }
+      // we made it!
       return true;
     }
 
-    print('No path found.');
+    // No path found.
     return false;
   }
 
