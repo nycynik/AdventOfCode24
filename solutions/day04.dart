@@ -8,10 +8,10 @@ class Day04 extends GenericDay {
 
   // Create custom cell types (optional)
   final customCellTypes = [
-    const CellType('X', 'X', CellBehavior.clear),
-    const CellType('M', 'M', CellBehavior.clear),
-    const CellType('A', 'A', CellBehavior.clear),
-    const CellType('S', 'S', CellBehavior.clear),
+    CellType('X', 'X', CellBehavior.clear),
+    CellType('M', 'M', CellBehavior.clear),
+    CellType('A', 'A', CellBehavior.clear),
+    CellType('S', 'S', CellBehavior.clear),
   ];
 
   @override

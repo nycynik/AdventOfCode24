@@ -1,14 +1,16 @@
-// CellTypes - what the robot thinks the grid pos is.
+// Pathfinding Grid
+
 import 'point.dart';
 
+// CellTypes - what the robot thinks the grid pos is.
 class CellType {
   final String symbol;
   final num value;
   final String description;
   final CellBehavior behavior;
+  final Point loc; 
 
-  const CellType(this.symbol, this.description, this.behavior,
-      {this.value = 0});
+  CellType(this.symbol, this.description, this.behavior, {this.value = 0, this.loc = const Point(0, 0)});
 
   // simple quick constructor, for from lists and such.
   factory CellType.fromChar(String char) {
@@ -28,11 +30,29 @@ class CellType {
 
 enum CellBehavior { clear, blocking, start, goal, unknown }
 
+class Region {
+  var _members = <CellType>[];
+  var _border = <CellType>[];
+  var _corners = <CellType>[];
+
+  Region(this._members, this._border, this._corners);
+  List<CellType> get members => _members;
+  List<CellType> get border => _border;
+  List<CellType> get corners => _corners;
+  bool get isEmpty => _members.isEmpty;
+
+  void cleanUpCornersAndBorders() {
+    // Remove duplicates from borders and corners
+    _border = _border.toSet().toList();
+    _corners = _corners.toSet().toList();
+  }
+}
+
 abstract class BaseGrid {
   // Minimum required CellTypes that all grids must support
-  static const CellType empty =
+  static CellType empty =
       CellType('.', 'Empty space', CellBehavior.clear);
-  static const CellType blocked =
+  static CellType blocked =
       CellType('#', 'Obstacle', CellBehavior.blocking);
 
   // Getter for all supported cell types
@@ -47,6 +67,7 @@ abstract class BaseGrid {
       throw StateError('Grid must support blocked cell type');
     }
   }
+
 }
 
 // abc for pathfinding in 2D grids

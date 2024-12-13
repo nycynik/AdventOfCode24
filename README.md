@@ -61,6 +61,14 @@ A test file is automatically generated for each day. It contains tests for both 
 
 All you have to do is **fill out the variables given at the top of the test file.**
 
+to add a watch for the tests - 
+
+    find .  -name "*.dart" | entr -r flutter test
+
+or to run just one test, and keep watching it. 
+
+    find .  -name "*.dart" | entr -r flutter test test/dayXX_test.dart
+
 ---
 
 ## Class Documentation

@@ -74,8 +74,7 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
   }
 
   // Factory constructor with custom cell types
-  factory Grid2D.withTypes(
-      List<List<CellType>> grid, List<CellType> customTypes) {
+  factory Grid2D.withTypes(List<List<CellType>> grid, List<CellType> customTypes) {
     var allTypes = [
       BaseGrid.empty,
       BaseGrid.blocked,
@@ -85,8 +84,7 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
   }
 
   // Create from list of strings
-  factory Grid2D.fromStrings(List<String> lines, List<CellType> customTypes,
-      {bool ignoreTypes = false}) {
+  factory Grid2D.fromStrings(List<String> lines, List<CellType> customTypes, {bool ignoreTypes = false}) {
     final allTypes = [BaseGrid.empty, BaseGrid.blocked, ...customTypes];
     final grid = lines
         .map((line) => line
@@ -106,10 +104,8 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
   }
 
   // Create from single multi-line string
-  factory Grid2D.fromString(String input, List<CellType> customTypes,
-      {bool ignoreTypes = false}) {
-    return Grid2D.fromStrings(input.trim().split('\n'), customTypes,
-        ignoreTypes: ignoreTypes);
+  factory Grid2D.fromString(String input, List<CellType> customTypes, {bool ignoreTypes = false}) {
+    return Grid2D.fromStrings(input.trim().split('\n'), customTypes, ignoreTypes: ignoreTypes);
   }
 
   @override
@@ -175,6 +171,10 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     return row >= 0 && row < rows && col >= 0 && col < cols;
   }
 
+  bool isValidPoint(Point p) {
+    return isInBounds(p.row, p.col);
+  }
+
   // Find a string in the grid, returns list of (starting point, direction) pairs
   List<(Point, Direction)> findString(String target) {
     List<(Point, Direction)> results = [];
@@ -217,9 +217,8 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
   // Get neighbors of a point
   List<Point> getNeighbors(Point p, {bool includeDiagonals = false}) {
     List<Point> neighbors = [];
-    List<Direction> directions = includeDiagonals
-        ? Direction.values
-        : [Direction.up, Direction.down, Direction.left, Direction.right];
+    List<Direction> directions =
+        includeDiagonals ? Direction.values : [Direction.up, Direction.down, Direction.left, Direction.right];
 
     for (var dir in directions) {
       int newRow = p.row + dir.rowDelta;
@@ -284,8 +283,7 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     for (var r = -distance; r <= distance; r++) {
       for (var c = -distance; c <= distance; c++) {
         final point = Point(center.row + r, center.col + c);
-        if (isValidPoint(point) &&
-            center.manhattanDistance(point) <= distance) {
+        if (isValidPoint(point) && center.manhattanDistance(point) <= distance) {
           points.add(point);
         }
       }
@@ -294,9 +292,73 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     return points;
   }
 
-  // Helper method to check if a point is within grid bounds
-  bool isValidPoint(Point p) {
-    return p.row >= 0 && p.row < rows && p.col >= 0 && p.col < cols;
+  Map<String, List<Region>> findRegions(Grid2D grid) {
+    Map<String, List<Region>> regions = {};
+    Set<Point> visited = {};
+
+    // Helper function to check if a point is valid and unvisited
+    bool isValidUnvisited(Point p) {
+      return grid.isValidPoint(p) && !visited.contains(p);
+    }
+
+    // Flood fill function to find connected cells
+    void floodFill(Point start) {
+      String symbol = grid.getAtPoint(start).symbol;
+      var members = <CellType>[];
+      var border = <CellType>[];
+      var corners = <CellType>[];
+      var queue = <Point>[start];
+
+      while (queue.isNotEmpty) {
+        var current = queue.removeAt(0);
+        if (!isValidUnvisited(current)) continue;
+
+        visited.add(current);
+        var currentCell = grid.getAtPoint(current);
+
+        if (currentCell.symbol == symbol) {
+          members.add(CellType(currentCell.symbol, currentCell.description, currentCell.behavior, loc: current));
+
+          // Check neighbors
+          for (var neighbor in grid.getNeighbors(current)) {
+            if (isValidUnvisited(neighbor)) {
+              if (grid.getAtPoint(neighbor).symbol == symbol) {
+                queue.add(neighbor);
+              } else {
+                border.add(grid.getAtPoint(neighbor));
+              }
+            }
+          }
+        }
+      }
+
+      if (members.isNotEmpty) {
+        // Create or update region
+        if (!regions.containsKey(symbol)) {
+          regions[symbol] = [Region(members, border, corners)];
+        } else {
+          regions[symbol]!.add(Region(members, border, corners));
+        }
+      }
+    }
+
+    // Scan the entire grid
+    for (var y = 0; y < grid.length; y++) {
+      for (var x = 0; x < grid.width; x++) {
+        var point = Point(x, y);
+        if (!visited.contains(point)) {
+          floodFill(point);
+        }
+      }
+    }
+
+    for (final region in regions.values) {
+      for (final r in region) {
+        r.cleanUpCornersAndBorders();
+      }
+    }
+
+    return regions;
   }
 
   /* Print and display the grid ************************************/
@@ -365,9 +427,7 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
 
   @override
   bool isWalkable(Point p) {
-    return _supportedCellTypes
-        .where((type) => type.symbol == getAtPoint(p).symbol)
-        .any(
+    return _supportedCellTypes.where((type) => type.symbol == getAtPoint(p).symbol).any(
           (type) =>
               type.behavior == CellBehavior.clear ||
               type.behavior == CellBehavior.start ||
@@ -384,8 +444,6 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     }
     return false;
   }
-
-
 
   @override
   int get rows => length;

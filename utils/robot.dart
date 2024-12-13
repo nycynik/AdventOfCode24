@@ -40,12 +40,12 @@ class Robot {
 
   // Default cell types if none provided
   static final List<CellType> defaultCellTypes = [
-    const CellType('.', 'Clear space', CellBehavior.clear),
-    const CellType('#', 'Wall', CellBehavior.blocking),
-    const CellType('G', 'Goal', CellBehavior.goal),
-    const CellType('S', 'Start', CellBehavior.start),
-    const CellType('*', 'Visited', CellBehavior.clear),
-    const CellType('!', 'OffGrid', CellBehavior.blocking),
+    CellType('.', 'Clear space', CellBehavior.clear),
+    CellType('#', 'Wall', CellBehavior.blocking),
+    CellType('G', 'Goal', CellBehavior.goal),
+    CellType('S', 'Start', CellBehavior.start),
+    CellType('*', 'Visited', CellBehavior.clear),
+    CellType('!', 'OffGrid', CellBehavior.blocking),
   ];
 
   Robot({

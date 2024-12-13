@@ -7,9 +7,9 @@ class Day08 extends GenericDay {
   Day08() : super(8);
 
   final customCellTypes = [
-    const CellType('.', 'Empty space', CellBehavior.clear),
-    const CellType('#', 'Obstical', CellBehavior.blocking),
-    const CellType('^', 'Start', CellBehavior.start),
+    CellType('.', 'Empty space', CellBehavior.clear),
+    CellType('#', 'Obstical', CellBehavior.blocking),
+    CellType('^', 'Start', CellBehavior.start),
   ];
     
   @override

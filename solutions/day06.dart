@@ -9,9 +9,9 @@ class Day06 extends GenericDay {
   
   // Create custom cell types (optional)
   final customCellTypes = [
-    const CellType('.', 'Empty space', CellBehavior.clear),
-    const CellType('#', 'Obstical', CellBehavior.blocking),
-    const CellType('^', 'Start', CellBehavior.start),
+    CellType('.', 'Empty space', CellBehavior.clear),
+    CellType('#', 'Obstical', CellBehavior.blocking),
+    CellType('^', 'Start', CellBehavior.start),
   ];
 
   @override

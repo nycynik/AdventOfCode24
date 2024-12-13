@@ -8,16 +8,16 @@ class Day10 extends GenericDay {
   Day10() : super(10);
 
   final customCellTypes = [
-    const CellType('0', 'Start', CellBehavior.start, value: 0),
-    const CellType('1', '1', CellBehavior.clear, value: 1),
-    const CellType('2', '2', CellBehavior.clear, value: 2),
-    const CellType('3', '3', CellBehavior.clear, value: 3),
-    const CellType('4', '4', CellBehavior.clear, value: 4),
-    const CellType('5', '5', CellBehavior.clear, value: 5),
-    const CellType('6', '6', CellBehavior.clear, value: 6),
-    const CellType('7', '7', CellBehavior.clear, value: 7),
-    const CellType('8', '8', CellBehavior.clear, value: 8),
-    const CellType('9', 'Goal', CellBehavior.goal, value: 9),
+    CellType('0', 'Start', CellBehavior.start, value: 0),
+    CellType('1', '1', CellBehavior.clear, value: 1),
+    CellType('2', '2', CellBehavior.clear, value: 2),
+    CellType('3', '3', CellBehavior.clear, value: 3),
+    CellType('4', '4', CellBehavior.clear, value: 4),
+    CellType('5', '5', CellBehavior.clear, value: 5),
+    CellType('6', '6', CellBehavior.clear, value: 6),
+    CellType('7', '7', CellBehavior.clear, value: 7),
+    CellType('8', '8', CellBehavior.clear, value: 8),
+    CellType('9', 'Goal', CellBehavior.goal, value: 9),
   ];
 
   @override
