@@ -61,6 +61,8 @@ class ClawMachine {
 
   /// Solves two linear Diophantine equations to find nA and nB.
   /// Returns a list [nA, nB] or null if no solution exists.
+  /// see https://en.wikipedia.org/wiki/Diophantine_equation
+  /// and https://docs.sympy.org/latest/modules/solvers/diophantine.html
   List<int>? _solveDiophantine(int aX, int bX, int goalX, int aY, int bY, int goalY) {
     // Use integer linear algebra to find a solution
     final det = aX * bY - aY * bX;
