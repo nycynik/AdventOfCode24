@@ -108,6 +108,14 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     return Grid2D.fromStrings(input.trim().split('\n'), customTypes, ignoreTypes: ignoreTypes);
   }
 
+  factory Grid2D.filledGrid(int rows, int cols, CellType fill, List<CellType> customTypes) {
+    final grid = List.generate(
+      rows,
+      (i) => List.generate(cols, (j) => fill),
+    );
+    return Grid2D(grid, [BaseGrid.empty, BaseGrid.blocked, ...customTypes]);
+  }
+  
   @override
   List<CellType> get supportedCellTypes => _supportedCellTypes;
 

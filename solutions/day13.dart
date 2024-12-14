@@ -172,12 +172,12 @@ class Day13 extends GenericDay {
         var solutionA = int.parse(result['nA'].toString());
         var solutionB = int.parse(result['nB'].toString());
 
-        print('Solution Found! for $clawMachine');
-        print('nA: ${result['nA']}, nB: ${result['nB']} yields ${result['final']}');
-        print('Total Cost: $cost');
+        // print('Solution Found! for $clawMachine');
+        // print('nA: ${result['nA']}, nB: ${result['nB']} yields ${result['final']}');
+        // print('Total Cost: $cost');
         totalTokens += cost;
       } else {
-        print('No solution is possible.');
+        // print('No solution is possible.');
       }
     }
     return totalTokens.toInt();
@@ -200,14 +200,15 @@ class Day13 extends GenericDay {
         var solutionA = int.parse(result['nA'].toString());
         var solutionB = int.parse(result['nB'].toString());
 
-        print('Solution Found! for $clawMachine');
-        print('nA: ${result['nA']}, nB: ${result['nB']} yields ${result['final']}');
-        print('Total Cost: $cost');
+        // print('Solution Found! for $clawMachine');
+        // print('nA: ${result['nA']}, nB: ${result['nB']} yields ${result['final']}');
+        // print('Total Cost: $cost');
         totalTokens += cost;
       } else {
-        print('No solution is possible.');
+        // print('No solution is possible.');
       }
     }
+    print(totalTokens);
     return totalTokens.toInt();
   }
 }

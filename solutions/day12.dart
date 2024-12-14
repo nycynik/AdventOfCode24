@@ -74,6 +74,30 @@ class Day12 extends GenericDay {
 
   @override
   int solvePart2() {
-    return 0;
+    var sum = 0;
+
+    final grid = parseInput();
+
+    print(grid.toStringWithCoordinates());
+
+    final regions = grid.findRegions(grid);
+
+    // Print regions
+    regions.forEach((symbol, region) {
+      if (region.length == 1) {
+        print('Region $symbol:');
+      } else {
+        print('Region $symbol has ${region.length} regions: ');
+      }
+
+      for (final r in region) {
+        print('  Members: ${r.members.length}');
+        print('  Edges: ${countEdges(grid, r)}');
+
+        sum += (r.members.length * countEdges(grid, r));
+      }
+    });
+
+    return sum;
   }
 }
