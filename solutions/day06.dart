@@ -7,7 +7,7 @@ import '../utils/robot.dart';
 class Day06 extends GenericDay {
   Day06() : super(6);
   
-  // Create custom cell types (optional)
+  // Create custom cell types
   final customCellTypes = [
     CellType('.', 'Empty space', CellBehavior.clear),
     CellType('#', 'Obstical', CellBehavior.blocking),

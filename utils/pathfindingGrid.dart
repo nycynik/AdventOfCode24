@@ -28,7 +28,7 @@ class CellType {
   }
 }
 
-enum CellBehavior { clear, blocking, start, goal, unknown }
+enum CellBehavior { clear, blocking, start, goal, movable, unknown }
 
 class Region {
   var _members = <CellType>[];

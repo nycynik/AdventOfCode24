@@ -37,6 +37,7 @@ class Robot {
   final List<CellType> cellTypes;
   final Set<Point> visitedPositions = {};
   final List<PositionState> visitHistory = [];
+  final MovementBehavior movementBehavior;
 
   // Default cell types if none provided
   static final List<CellType> defaultCellTypes = [
@@ -54,8 +55,10 @@ class Robot {
     Point? initialPosition,
     List<CellType>? cellTypes,
     this.maxIncrementPerMove = double.infinity,
+    MovementBehavior? movementBehavior,
   })  : cellTypes = cellTypes ?? defaultCellTypes,
-        position = initialPosition ?? const Point(0, 0) {
+        position = initialPosition ?? const Point(0, 0),
+        movementBehavior = movementBehavior ?? FacingMovementBehavior() {
     if (initialPosition == null) {
       if (!findStartingPoint()) {
         throw ArgumentError(
@@ -76,6 +79,7 @@ class Robot {
       : position = other.position,
         facing = other.facing,
         maxIncrementPerMove = other.maxIncrementPerMove,
+        movementBehavior = other.movementBehavior,
         grid = newGrid ??
             Grid2D.fromString(
                 other.grid.toString(), other.grid.supportedCellTypes),
@@ -84,17 +88,18 @@ class Robot {
     visitHistory.addAll(other.visitHistory);
   }
 
-  // Movement methods
-  bool moveForward() {
-    final nextPosition = position.move(facing);
+  // Movement methods now delegate to the movement behavior
+  bool moveInDirection(Direction direction) {
+    return movementBehavior.moveInDirection(this, direction);
+  }
 
-    if (_canMoveTo(nextPosition)) {
-      position = nextPosition;
-      visitedPositions.add(position);
-      visitHistory.add(PositionState(position, facing));
-      return true;
-    }
-    return false;
+  bool canMoveInDirection(Direction direction) {
+    return movementBehavior.canMoveInDirection(this, direction);
+  }
+
+  // For backwards compatibility
+  bool moveForward() {
+    return moveInDirection(facing);
   }
 
   void turnLeft() {
@@ -499,5 +504,67 @@ class RobotMovementPlanner {
       return List.generate(
           4 - diff, (_) => MovementCommand(MovementType.turnLeft, 1));
     }
+  }
+}
+
+/* robot movement behaviour */
+abstract class MovementBehavior {
+  bool moveInDirection(Robot robot, Direction direction);
+  bool canMoveInDirection(Robot robot, Direction direction);
+  Point getNextPosition(Robot robot, Direction direction);
+}
+
+// Implementation for robots that need to face a direction before moving
+class FacingMovementBehavior implements MovementBehavior {
+  @override
+  bool moveInDirection(Robot robot, Direction direction) {
+    // If not facing the right direction, return false
+    if (robot.facing != direction) {
+      return false;
+    }
+
+    final nextPosition = getNextPosition(robot, direction);
+    if (robot._canMoveTo(nextPosition)) {
+      robot.position = nextPosition;
+      robot.visitedPositions.add(robot.position);
+      robot.visitHistory.add(PositionState(robot.position, robot.facing));
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  bool canMoveInDirection(Robot robot, Direction direction) {
+    return robot.facing == direction && robot._canMoveTo(getNextPosition(robot, direction));
+  }
+
+  @override
+  Point getNextPosition(Robot robot, Direction direction) {
+    return robot.position.move(direction);
+  }
+}
+
+// Implementation for robots that can move in any direction
+class FreeMovementBehavior implements MovementBehavior {
+  @override
+  bool moveInDirection(Robot robot, Direction direction) {
+    final nextPosition = getNextPosition(robot, direction);
+    if (robot._canMoveTo(nextPosition)) {
+      robot.position = nextPosition;
+      robot.visitedPositions.add(robot.position);
+      robot.visitHistory.add(PositionState(robot.position, direction));
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  bool canMoveInDirection(Robot robot, Direction direction) {
+    return robot._canMoveTo(getNextPosition(robot, direction));
+  }
+
+  @override
+  Point getNextPosition(Robot robot, Direction direction) {
+    return robot.position.move(direction);
   }
 }
