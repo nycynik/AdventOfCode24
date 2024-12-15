@@ -61,7 +61,7 @@ void main() {
     () {
       test('Part 1', () {
         final day = Day14()..inputForTesting = _exampleInput1;
-        expect(day.solvePart1(), _exampleSolutionPart1);
+        expect(day.solvePart1Small(), _exampleSolutionPart1);
       });
       test('Part 2', () {
         final day = Day14()..inputForTesting = _exampleInput2;

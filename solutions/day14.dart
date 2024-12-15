@@ -1,3 +1,4 @@
+import '../utils/grid2D.dart';
 import '../utils/index.dart';
 import '../utils/point.dart';
 
@@ -14,6 +15,9 @@ class Robotic {
 }
 
 class Day14 extends GenericDay {
+  int width = 101;
+  int height = 103;
+
   Day14() : super(14);
 
   @override
@@ -37,14 +41,36 @@ class Day14 extends GenericDay {
     return robots;
   }
 
+  int getQuadrant(Point p, int width, int height) {
+    int midrow = width ~/ 2;
+    int midcol = height ~/ 2;
+    if (p.row < midrow && p.col < midcol) return 1;
+    if (p.row < midrow && p.col > midcol) return 2;
+    if (p.row > midrow && p.col < midcol) return 3;
+    if (p.row > midrow && p.col > midcol) return 4;
+    return 0;
+  }
+
+  int solvePart1Small() {
+    this.width = 11; // 101
+    this.height = 7; // 103
+
+    return this.solvePart1();
+  }
+
   @override
   int solvePart1() {
     var robots = parseInput();
 
+    var quadrantCounts = [0, 0, 0, 0, 0];
+
     for (var robot in robots) {
-      print(robot);
+      robot.location = Point((robot.location.row + 100 * robot.velocity.row) % width,
+          (robot.location.col + 100 * robot.velocity.col) % height);
+      var quadrant = getQuadrant(robot.location, width, height);
+      quadrantCounts[quadrant]++;
     }
-    return 0;
+    return quadrantCounts[1] * quadrantCounts[2] * quadrantCounts[3] * quadrantCounts[4];
   }
 
   @override
