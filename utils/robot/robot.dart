@@ -1,10 +1,11 @@
 // CellType class to define what different cells mean
 import 'package:meta/meta.dart';
 
-import 'grid2D.dart';
-import 'pathfinding.dart';
-import 'pathfindingGrid.dart';
-import 'point.dart';
+import '../grid2D.dart';
+import '../pathfinding.dart';
+import '../pathfindingGrid.dart';
+import '../point.dart';
+import 'movementBahavior.dart';
 
 @immutable
 class PositionState {
@@ -19,10 +20,7 @@ class PositionState {
   // to compare states
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is PositionState &&
-          position == other.position &&
-          facing == other.facing;
+      identical(this, other) || other is PositionState && position == other.position && facing == other.facing;
 
   @override
   int get hashCode => Object.hash(position, facing);
@@ -80,9 +78,7 @@ class Robot {
         facing = other.facing,
         maxIncrementPerMove = other.maxIncrementPerMove,
         movementBehavior = other.movementBehavior,
-        grid = newGrid ??
-            Grid2D.fromString(
-                other.grid.toString(), other.grid.supportedCellTypes),
+        grid = newGrid ?? Grid2D.fromString(other.grid.toString(), other.grid.supportedCellTypes),
         cellTypes = List.from(other.cellTypes) {
     visitedPositions.addAll(other.visitedPositions);
     visitHistory.addAll(other.visitHistory);
@@ -95,6 +91,23 @@ class Robot {
 
   bool canMoveInDirection(Direction direction) {
     return movementBehavior.canMoveInDirection(this, direction);
+  }
+
+  /**
+   * This forces the robot to a new position and facing.
+   * This is used internally after a robot move is approved via logic of the
+   * movementBahavior, and it used to update the state. 
+   */
+  void setRobotPosition(Point nextPos, Direction nextFacing) {
+    var from = position;
+    // move to new position
+    position = nextPos;
+    facing = nextFacing;
+    visitedPositions.add(position); // can use pos since it moved already
+    visitHistory.add(PositionState(position, facing));
+
+    // update grid, in case of a pushable/movable
+    grid.moveObject(from, nextPos, nextFacing);
   }
 
   // For backwards compatibility
@@ -171,27 +184,37 @@ class Robot {
     return grid.isInBounds(p.row, p.col);
   }
 
-  bool _canMoveTo(Point p) {
+  bool canMoveTo(Point p, Direction d) {
+    print('checking $p');
     if (!_isValidPosition(p)) {
       return false;
     }
 
     final cell = grid.getAt(p.row, p.col);
-    return _isClearCell(cell);
+    if (_isClearCell(cell)) return true;
+
+    if (_isPushableCell(cell)) {
+      // see if that can move where it needs to go
+      print('push it real good $p -> ${p.move(d)} ');
+      return _isValidPosition(p.move(d)) && canMoveTo(p.move(d), d);
+    }
+    return false;
+  }
+
+  bool _isPushableCell(CellType cell) {
+    return cellTypes.where((type) => type.symbol == cell.symbol).any((type) => type.behavior == CellBehavior.pushable);
   }
 
   bool _isClearCell(CellType cell) {
-    return cellTypes.where((type) => type.symbol == cell.symbol).any((type) =>
-        type.behavior == CellBehavior.clear ||
-        type.behavior == CellBehavior.start);
+    return cellTypes
+        .where((type) => type.symbol == cell.symbol)
+        .any((type) => type.behavior == CellBehavior.clear || type.behavior == CellBehavior.start);
   }
 
   // Status methods
   bool isAtGoal() {
     final currentCell = grid.getAt(position.row, position.col);
-    return cellTypes
-        .where((type) => type.symbol == currentCell)
-        .any((type) => type.behavior == CellBehavior.goal);
+    return cellTypes.where((type) => type.symbol == currentCell).any((type) => type.behavior == CellBehavior.goal);
   }
 
   // Move multiple steps forward
@@ -225,7 +248,7 @@ class Robot {
   // Check if movement is possible
   bool canMoveForward() {
     final ahead = position.move(facing);
-    return _canMoveTo(ahead);
+    return canMoveTo(ahead, facing);
   }
 
   // Get surrounding cells
@@ -233,8 +256,7 @@ class Robot {
     final surroundings = <Direction, String>{};
     for (final dir in Direction.values) {
       final pos = position.move(dir);
-      surroundings[dir] =
-          _isValidPosition(pos) ? grid.getAt(pos.row, pos.col).symbol : '#';
+      surroundings[dir] = _isValidPosition(pos) ? grid.getAt(pos.row, pos.col).symbol : '#';
     }
     return surroundings;
   }
@@ -261,9 +283,7 @@ class Robot {
     return {
       'visited': visitedPositions.length,
       'traversable': totalTraversable,
-      'coverage': totalTraversable > 0
-          ? visitedPositions.length * 100 ~/ totalTraversable
-          : 0,
+      'coverage': totalTraversable > 0 ? visitedPositions.length * 100 ~/ totalTraversable : 0,
     };
   }
 
@@ -274,7 +294,7 @@ class Robot {
   List<Point> getUnvisitedAdjacent() {
     return Direction.values
         .map((dir) => position.move(dir))
-        .where((p) => _isValidPosition(p) && _canMoveTo(p) && !hasVisited(p))
+        .where((p) => _isValidPosition(p) && canMoveTo(p, facing) && !hasVisited(p))
         .toList();
   }
 
@@ -336,9 +356,7 @@ class Robot {
     for (var row = 0; row < grid.rows; row++) {
       for (var col = 0; col < grid.cols; col++) {
         final cell = grid.getAt(row, col);
-        if (cellTypes
-            .where((type) => type.symbol == cell.symbol)
-            .any((type) => type.behavior == CellBehavior.start)) {
+        if (cellTypes.where((type) => type.symbol == cell.symbol).any((type) => type.behavior == CellBehavior.start)) {
           position = Point(row, col);
           return true;
         }
@@ -358,8 +376,7 @@ class Robot {
 
     // Mark all visited positions
     for (final pos in visitedPositions) {
-      displayGrid.setAt(pos.row, pos.col,
-          CellType(visitedMarker, 'visited', CellBehavior.clear));
+      displayGrid.setAt(pos.row, pos.col, CellType(visitedMarker, 'visited', CellBehavior.clear));
     }
 
     // Optionally show current position with direction
@@ -378,9 +395,7 @@ class Robot {
       );
     }
 
-    return withCoordinates
-        ? displayGrid.toStringWithCoordinates()
-        : displayGrid.toString();
+    return withCoordinates ? displayGrid.toStringWithCoordinates() : displayGrid.toString();
   }
 
   // Get path visualization
@@ -403,9 +418,7 @@ class Robot {
       );
     }
 
-    return withCoordinates
-        ? displayGrid.toStringWithCoordinates()
-        : displayGrid.toString();
+    return withCoordinates ? displayGrid.toStringWithCoordinates() : displayGrid.toString();
   }
 
   // Get the movement history as a string
@@ -498,73 +511,9 @@ class RobotMovementPlanner {
     var diff = (targetIndex - currentIndex + 4) % 4;
 
     if (diff <= 2) {
-      return List.generate(
-          diff, (_) => MovementCommand(MovementType.turnRight, 1));
+      return List.generate(diff, (_) => MovementCommand(MovementType.turnRight, 1));
     } else {
-      return List.generate(
-          4 - diff, (_) => MovementCommand(MovementType.turnLeft, 1));
+      return List.generate(4 - diff, (_) => MovementCommand(MovementType.turnLeft, 1));
     }
-  }
-}
-
-/* robot movement behaviour */
-abstract class MovementBehavior {
-  bool moveInDirection(Robot robot, Direction direction);
-  bool canMoveInDirection(Robot robot, Direction direction);
-  Point getNextPosition(Robot robot, Direction direction);
-}
-
-// Implementation for robots that need to face a direction before moving
-class FacingMovementBehavior implements MovementBehavior {
-  @override
-  bool moveInDirection(Robot robot, Direction direction) {
-    // If not facing the right direction, return false
-    if (robot.facing != direction) {
-      return false;
-    }
-
-    final nextPosition = getNextPosition(robot, direction);
-    if (robot._canMoveTo(nextPosition)) {
-      robot.position = nextPosition;
-      robot.visitedPositions.add(robot.position);
-      robot.visitHistory.add(PositionState(robot.position, robot.facing));
-      return true;
-    }
-    return false;
-  }
-
-  @override
-  bool canMoveInDirection(Robot robot, Direction direction) {
-    return robot.facing == direction && robot._canMoveTo(getNextPosition(robot, direction));
-  }
-
-  @override
-  Point getNextPosition(Robot robot, Direction direction) {
-    return robot.position.move(direction);
-  }
-}
-
-// Implementation for robots that can move in any direction
-class FreeMovementBehavior implements MovementBehavior {
-  @override
-  bool moveInDirection(Robot robot, Direction direction) {
-    final nextPosition = getNextPosition(robot, direction);
-    if (robot._canMoveTo(nextPosition)) {
-      robot.position = nextPosition;
-      robot.visitedPositions.add(robot.position);
-      robot.visitHistory.add(PositionState(robot.position, direction));
-      return true;
-    }
-    return false;
-  }
-
-  @override
-  bool canMoveInDirection(Robot robot, Direction direction) {
-    return robot._canMoveTo(getNextPosition(robot, direction));
-  }
-
-  @override
-  Point getNextPosition(Robot robot, Direction direction) {
-    return robot.position.move(direction);
   }
 }

@@ -1,7 +1,7 @@
 import 'package:test/test.dart';
 
-import 'grid2D.dart';
-import 'point.dart';
+import '../grid2D.dart';
+import '../point.dart';
 import 'robot.dart';
 
 void testRobot() {

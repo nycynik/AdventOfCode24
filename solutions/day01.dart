@@ -3,7 +3,7 @@ import '../utils/index.dart';
 import '../utils/pathfinding.dart';
 import '../utils/pathfindingGrid.dart';
 import '../utils/point.dart';
-import '../utils/robot.dart';
+import '../utils/robot/robot.dart';
 import '../utils/sparseGrid.dart';
 
 class Day01 extends GenericDay {

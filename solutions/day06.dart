@@ -2,7 +2,7 @@ import '../utils/grid2D.dart';
 import '../utils/index.dart';
 import '../utils/pathfindingGrid.dart';
 import '../utils/point.dart';
-import '../utils/robot.dart';
+import '../utils/robot/robot.dart';
 
 class Day06 extends GenericDay {
   Day06() : super(6);

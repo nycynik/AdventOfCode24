@@ -115,7 +115,7 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     );
     return Grid2D(grid, [BaseGrid.empty, BaseGrid.blocked, ...customTypes]);
   }
-  
+
   @override
   List<CellType> get supportedCellTypes => _supportedCellTypes;
 
@@ -416,6 +416,9 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
           if (cell.behavior == CellBehavior.goal) color = chalk.bold.green;
           if (cell.behavior == CellBehavior.blocking) color = chalk.white;
           if (cell.behavior == CellBehavior.clear) color = chalk.gray;
+          if (cell.behavior == CellBehavior.movable) color = chalk.blue;
+          if (cell.behavior == CellBehavior.pushable) color = chalk.cyan;
+
           buffer.write(color(cell.symbol));
         } else {
           buffer.write(cell.symbol);
@@ -465,5 +468,35 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
       _grid.map((row) => row.map((cell) => cell.copy()).toList()).toList(),
       _supportedCellTypes,
     );
+  }
+
+  /**
+   * Generic mover that will move anything to a new position from another position.
+   * Also pushes pushables if they can be pushed :) 
+   */
+  bool moveObject(Point from, Point nextPos, Direction dir) {
+    if (!isInBounds(nextPos.row, nextPos.col)) return false;
+
+    var fromCell = this[from];
+    var nextCell = this[nextPos];
+
+    // if this is pushable, see if it is going to push another, and continue to
+    // recurse aroudn moveObject
+    if (nextCell.behavior == CellBehavior.pushable) {
+      var nextNextPos = moveFrom(nextPos, dir);
+      if (nextNextPos != null) {
+        moveObject(nextPos, nextNextPos, dir);
+      } else {
+        // we failed to finish the chain of pushables, fail the move.
+        return false;
+      }
+    }
+
+    setAtPoint(nextPos, fromCell);
+    // set the from point to an the first CellType in types that is CellBehavior.clear
+    var clearCell = _supportedCellTypes.firstWhere((type) => type.behavior == CellBehavior.clear);
+    setAtPoint(from, clearCell);
+
+    return true;
   }
 }
