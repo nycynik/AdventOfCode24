@@ -9,6 +9,21 @@ class Point {
   // constructor
   const Point(this.row, this.col);
 
+  // construct from a string represeting a point, like `(2,1)` or `2,1`.
+  factory Point.fromStringRowCol(String coordinates) {
+    final parts = coordinates.trim().replaceAll(RegExp(r'[()]'), '').split(',');
+    final row = int.parse(parts[0].trim());
+    final col = int.parse(parts[1].trim());
+    return Point(row, col);
+  }
+
+  factory Point.fromStringXY(String coordinates) {
+    final parts = coordinates.trim().replaceAll(RegExp(r'[()]'), '').split(',');
+    final row = int.parse(parts[1].trim());
+    final col = int.parse(parts[0].trim());
+    return Point(row, col);
+  }
+
   // members
   final int row;
   final int col;

@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import 'pathfindingGrid.dart';
 import 'point.dart';
 
@@ -93,6 +95,66 @@ class AStar {
     return null; // No path found
   }
 
+  List<Node> findOptimalPath(Node start, Node goal) {
+    final openSet = PriorityQueue<Node>((a, b) => a.f.compareTo(b.f));
+    final visited = <Point, Node>{};
+
+    start
+      ..g = 0
+      ..h = _calculateHeuristic(start, goal)
+      ..f = _calculateHeuristic(start, goal);
+
+    openSet.add(start);
+    visited[start.loc] = start;
+
+    while (openSet.isNotEmpty) {
+      final current = openSet.removeFirst();
+
+      if (current == goal) {
+        return _reconstructPath(current);
+      }
+
+      for (final dir in directions) {
+        var neighborPos = Point(
+          current.loc.row + dir[0], // row first
+          current.loc.col + dir[1], // then column
+        );
+
+        if (!grid.isValidPosition(neighborPos)) continue;
+        if (!grid.isWalkable(neighborPos)) continue;
+        if (!grid.isTraversable(current.loc, neighborPos)) continue;
+
+        final tentativeGScore = current.g + 1;
+        final neighbor = visited[neighborPos];
+
+        if (neighbor == null) {
+          // not yet visited
+          var neighbor = Node(neighborPos);
+          var heuristic = _calculateHeuristic(neighbor, goal);
+          neighbor
+            ..parent = current
+            ..g = tentativeGScore
+            ..h = heuristic
+            ..f = tentativeGScore + heuristic;
+
+          openSet.add(neighbor);
+          visited[neighborPos] = neighbor;
+        } else if (tentativeGScore < neighbor.g) {
+          // Found a better path to neighbor
+          neighbor.parent = current;
+          neighbor.g = tentativeGScore;
+          neighbor.f = tentativeGScore + _calculateHeuristic(Node(neighborPos), goal);
+
+          // Update position in priority queue
+          openSet.remove(neighbor);
+          openSet.add(neighbor);
+        }
+      }
+    }
+
+    return [];
+  }
+
   List<List<Node>> findAllOptimalPaths(Node start, Node goal) {
     final openSet = <Node>{};
     final closedSet = <Node>{};
@@ -131,8 +193,7 @@ class AStar {
       closedSet.add(current);
 
       for (final dir in directions) {
-        final neighborPos =
-            Point(current.loc.row + dir[0], current.loc.col + dir[1]);
+        final neighborPos = Point(current.loc.row + dir[0], current.loc.col + dir[1]);
 
         if (!grid.isValidPosition(neighborPos)) continue;
         if (!grid.isWalkable(neighborPos)) continue;

@@ -382,7 +382,10 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
     String padding = ' ',
     bool showRowNumbers = true,
     bool color = true,
+    List<Point>? path,
   }) {
+    var printingPath = (path != null);
+
     final buffer = StringBuffer();
 
     if (showTens && cols > 10) {
@@ -412,13 +415,16 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
         var cell = getAt(row, col);
         if (color) {
           var color = chalk.white;
-          if (cell.behavior == CellBehavior.start) color = chalk.bold.yellow;
-          if (cell.behavior == CellBehavior.goal) color = chalk.bold.green;
-          if (cell.behavior == CellBehavior.blocking) color = chalk.white;
-          if (cell.behavior == CellBehavior.clear) color = chalk.gray;
-          if (cell.behavior == CellBehavior.movable) color = chalk.blue;
-          if (cell.behavior == CellBehavior.pushable) color = chalk.cyan;
-
+          if (printingPath && path.contains(Point(row, col))) {
+            color = chalk.bold.magenta;
+          } else {
+            if (cell.behavior == CellBehavior.start) color = chalk.bold.yellow;
+            if (cell.behavior == CellBehavior.goal) color = chalk.bold.green;
+            if (cell.behavior == CellBehavior.blocking) color = chalk.white;
+            if (cell.behavior == CellBehavior.clear) color = chalk.gray;
+            if (cell.behavior == CellBehavior.movable) color = chalk.blue;
+            if (cell.behavior == CellBehavior.pushable) color = chalk.cyan;
+          }
           buffer.write(color(cell.symbol));
         } else {
           buffer.write(cell.symbol);
@@ -449,7 +455,7 @@ class Grid2D extends BaseGrid implements PathfindingGrid {
   @override
   bool isTraversable(Point start, Point dest) {
     if (isWalkable(start) && isWalkable(dest)) {
-      if ((getAtPoint(dest).value - getAtPoint(start).value) == 1) {
+      if (start.manhattanDistance(dest) == 1) {
         return true;
       }
     }
